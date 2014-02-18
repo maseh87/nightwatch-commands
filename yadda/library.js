@@ -28,8 +28,10 @@ module.exports.init = function() {
     // Uses the browser.execute to run code within the client browser,
     // access the Mobify object and test the template.
     //
-    .then("it should use the $TEMPLATE template", function(template) {
-        this.browser.assertMobifyTemplate(template);
+    .then("it should use the $TEMPLATE template", function(expectedTemplate) {
+        this.browser.getMobifyEvaluatedData(function(template){
+            this.assert.equal(template, expectedTemplate);
+        });
     })
 
     // Waits for the correct element, then test for the text
