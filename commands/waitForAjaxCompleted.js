@@ -1,25 +1,54 @@
-exports.command = function(callback) {
-    var client = this;
-    var start = new Date().getTime();
+var Protocol = require('nightwatch/lib/selenium/protocol.js'),
+    util = require('util'),
+    events = require('events');
 
-    // Checks the jQuery.active property to see if an ajax request is
-    // completed.
-    return client.execute_async(
-        function() { return $.active; },
-        [],
-        function(result) {
-            console.log('result', result)
-            var now = new Date().getTime();
-            var msg = 'AJAX call completed after ' +
-                (now - self.startTimer) + ' milliseconds.';
-
-            // Assert that the evaluatedData object is present
-            client.assert.notEqual(result.value, 0, msg);
-
-            if (typeof callback === 'function') {
-                callback.call(client, result);
-            }
-        }
-    );
-
+function CommandAction() {
+  events.EventEmitter.call(this);
+  this.startTimer = null;
+  this.cb = null;
+  this.ms = null;
+  this.selector = null;
 };
+
+util.inherits(CommandAction, events.EventEmitter);
+CommandAction.prototype.command = function(milliseconds, callback) {
+  if (milliseconds && typeof milliseconds != 'number') {
+    throw new Error('waitForPageToBeMobified expects first parameter to be number; ' +
+      typeof (milliseconds) + ' given')
+  }
+  this.startTimer = new Date().getTime();
+  this.cb = callback || function() {};
+  this.ms = milliseconds || 1000;
+  this.check();
+  return this;
+}
+
+CommandAction.prototype.check = function() {
+  var self = this;
+  var msg = "Timed out while waiting for page to be Mobified after " + self.ms + " milliseconds.";
+
+  Protocol.actions.execute.call(this.client, 'return $.active', function(result) {
+    var now = new Date().getTime();
+    var timeout = 1000;
+
+    if (result.status === 0) {
+      setTimeout(function() {
+        self.cb(result.value);
+        var msg = 'AJAX call completed after ' +
+            (now - start) + ' milliseconds.';
+        self.client.assertion(true, !!result.value, false, msg, true);
+        return self.emit('complete');
+      }, timeout);
+    } else if (now - self.startTimer < self.ms) {
+      setTimeout(function() {
+        self.check();
+      }, 500);
+    } else {
+      self.cb(false);
+      self.client.assertion(false, false, false, msg, true);
+      return self.emit('complete');
+    }
+  });
+};
+
+module.exports = CommandAction;
