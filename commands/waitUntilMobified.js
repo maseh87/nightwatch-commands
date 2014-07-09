@@ -13,7 +13,7 @@ exports.command = function(milliseconds, callback) {
      *  Adaptive object in the client browser
      */
     client.waitForCondition(function() {
-        var framework = Mobify || Adaptive;
+        var framework = Mobify || Adaptive || mobify || adaptive;
         return !!framework;
     }, milliseconds, 2000, messages, function(result) {
         if (typeof callback === 'function') {
